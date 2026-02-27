@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { BusinessProfileService } from '../business-profile.service';
 import { LoanService } from '../loan.service';
 import { BusinessAnalyticsService, BusinessSummaryDTO } from '../analytics.service';
+import { AuthService } from '../../auth/auth.service';
 
 @Component({
   selector: 'app-business-dashboard',
@@ -67,18 +68,6 @@ import { BusinessAnalyticsService, BusinessSummaryDTO } from '../analytics.servi
     
     <div class="dashboard-sections">
       <div class="section-card">
-        <h3>Payment Trends (Charts)</h3>
-        <div class="placeholder-box">
-          <p><i>Daily / Weekly / Monthly charts coming soon...</i></p>
-        </div>
-      </div>
-      <div class="section-card">
-        <h3>Top Customers by Volume</h3>
-        <div class="placeholder-box">
-          <p><i>Customer insights coming soon...</i></p>
-        </div>
-      </div>
-      <div class="section-card">
         <h3>Outstanding Invoices</h3>
         <div class="placeholder-box">
           <p><i>Invoice tracking module active. View Invoices tab for details.</i></p>
@@ -110,14 +99,18 @@ export class BusinessDashboardComponent implements OnInit {
   pendingEmis = 0;
   latestLoanStatus = '';
   summary: BusinessSummaryDTO | null = null;
+  userId: number | null = null;
 
   constructor(
     private profileService: BusinessProfileService,
     private loanService: LoanService,
-    private analyticsService: BusinessAnalyticsService
+    private analyticsService: BusinessAnalyticsService,
+    private authService: AuthService
   ) { }
 
   ngOnInit() {
+    this.userId = this.authService.getUserId();
+
     this.profileService.getMyProfile().subscribe({
       next: (res) => {
         this.isVerified = res.data.isVerified;
@@ -151,10 +144,12 @@ export class BusinessDashboardComponent implements OnInit {
     });
 
     // Load Business Analytics Summary
-    this.analyticsService.getSummary(this.profileId).subscribe({
-      next: (res) => {
-        this.summary = res.data;
-      }
-    });
+    if (this.userId) {
+      this.analyticsService.getSummary(this.userId).subscribe({
+        next: (res) => {
+          this.summary = res.data;
+        }
+      });
+    }
   }
 }
