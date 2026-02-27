@@ -11,14 +11,15 @@ import { NotificationService, NotificationDTO } from '../notification.service';
   imports: [CommonModule, RouterLink],
   template: `
     <nav class="navbar">
-      <div class="logo-container" routerLink="/dashboard" style="cursor: pointer; display: flex; align-items: center;">
+      <div class="logo-container" [routerLink]="getDashboardRoute()" style="cursor: pointer; display: flex; align-items: center;">
         <h3 class="m-0 fw-bold" style="letter-spacing: -1px;">Rev<span style="color: #ffeb3b;">Pay</span></h3>
       </div>
       <div class="links" *ngIf="authService.isLoggedIn()">
-        <a routerLink="/dashboard">Dashboard</a>
+        <a [routerLink]="getDashboardRoute()">Dashboard</a>
         <a routerLink="/cards">Cards</a>
         <a routerLink="/transactions">History</a>
         <a routerLink="/requests">Requests</a>
+        <a *ngIf="authService.getUserRole() === 'BUSINESS' || authService.getUserRole() === 'ROLE_BUSINESS'" routerLink="/business/dashboard" class="business-link">Business Hub</a>
         <a *ngIf="authService.getUserRole() === 'ADMIN' || authService.getUserRole() === 'ROLE_ADMIN'" routerLink="/admin/dashboard" class="admin-link">Admin Panel</a>
         <div class="notification-container" (click)="toggleNotifications($event)">
           <div class="notification-icon" title="Notifications" #bellIcon>
@@ -28,13 +29,22 @@ import { NotificationService, NotificationDTO } from '../notification.service';
             <span class="notification-dot" *ngIf="unreadCount > 0">{{ unreadCount }}</span>
           </div>
           <div class="notification-dropdown" *ngIf="showNotifications" (click)="$event.stopPropagation()">
-            <div class="notification-header d-flex justify-content-between align-items-center">
-                Notifications
-                <button class="btn btn-sm btn-link p-0 text-decoration-none" (click)="testNotification()">Test System Alert</button>
+            <div class="notification-header d-flex flex-column">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                  <span class="fw-bold fs-6">Notifications</span>
+                  <div class="form-check form-switch m-0">
+                    <input class="form-check-input" type="checkbox" role="switch" id="notifSwitch" [checked]="notificationsEnabled" (change)="toggleNotificationSystem()" style="cursor: pointer;">
+                    <label class="form-check-label text-muted" style="font-size: 12px;" for="notifSwitch">{{ notificationsEnabled ? 'Enabled' : 'Disabled' }}</label>
+                  </div>
+                </div>
+                <div class="d-flex justify-content-between" *ngIf="notificationsEnabled">
+                   <span class="badge bg-secondary" style="font-size: 10px;">{{ unreadCount }} Unread</span>
+                   <button class="btn btn-sm btn-outline-primary p-1" style="font-size: 10px;" (click)="testNotification()">+ Test Alert</button>
+                </div>
             </div>
-            <div class="notification-list">
+            <div class="notification-list" *ngIf="notificationsEnabled">
               <div class="notification-item" *ngIf="notifications.length === 0">
-                <div class="title text-center text-muted my-3">No new alerts.</div>
+                <div class="title text-center text-muted my-3">No notifications found.</div>
               </div>
               <div class="notification-item" 
                    *ngFor="let n of notifications" 
@@ -43,6 +53,9 @@ import { NotificationService, NotificationDTO } from '../notification.service';
                 <div class="title">{{ n.message }}</div>
                 <div class="time">{{ n.createdAt | date:'shortTime' }} &bull; {{ n.createdAt | date:'MMM d' }}</div>
               </div>
+            </div>
+            <div class="notification-list p-3 text-center text-muted" *ngIf="!notificationsEnabled">
+                Notifications are currently disabled.
             </div>
           </div>
         </div>
@@ -61,6 +74,7 @@ import { NotificationService, NotificationDTO } from '../notification.service';
     .links a, .links button { color: white; margin-left: 15px; text-decoration: none; background: none; border: none; cursor: pointer; font-size: 16px; }
     .profile-link { font-weight: bold; text-decoration: underline !important;}
     .admin-link { font-weight: bold; color: #ffeb3b !important; }
+    .business-link { font-weight: bold; color: #0dcaf0 !important; }
     .notification-container { position: relative; }
     .notification-icon { position: relative; color: white; margin-left: 15px; cursor: pointer; display: flex; align-items: center; justify-content: center; width: 32px; height: 32px; border-radius: 50%; transition: background 0.2s; }
     .notification-icon:hover { background: rgba(255, 255, 255, 0.2); }
@@ -77,6 +91,7 @@ import { NotificationService, NotificationDTO } from '../notification.service';
 })
 export class NavbarComponent implements OnInit, OnDestroy {
   showNotifications = false;
+  notificationsEnabled: boolean = true;
   notifications: NotificationDTO[] = [];
   unreadCount = 0;
   private authSub?: Subscription;
@@ -90,18 +105,27 @@ export class NavbarComponent implements OnInit, OnDestroy {
   ) { }
 
   ngOnInit() {
-    if (this.authService.isLoggedIn()) {
+    const savedToggle = localStorage.getItem('notificationsEnabled');
+    if (savedToggle !== null) {
+      this.notificationsEnabled = savedToggle === 'true';
+    }
+
+    if (this.authService.isLoggedIn() && this.notificationsEnabled) {
       this.loadNotifications();
     }
     this.authSub = this.authService.authStatusChanged.subscribe(isLoggedIn => {
-      if (isLoggedIn) {
+      if (isLoggedIn && this.notificationsEnabled) {
         this.loadNotifications();
       } else {
-        this.notifications = [];
-        this.unreadCount = 0;
-        this.showNotifications = false;
+        this.clearNotifications();
       }
     });
+  }
+
+  clearNotifications() {
+    this.notifications = [];
+    this.unreadCount = 0;
+    this.showNotifications = false;
   }
 
   ngOnDestroy() {
@@ -146,6 +170,22 @@ export class NavbarComponent implements OnInit, OnDestroy {
   toggleNotifications(event: Event) {
     event.stopPropagation();
     this.showNotifications = !this.showNotifications;
+    // Auto refresh when opening if enabled
+    if (this.showNotifications && this.notificationsEnabled) {
+      this.loadNotifications();
+    }
+  }
+
+  toggleNotificationSystem() {
+    this.notificationsEnabled = !this.notificationsEnabled;
+    localStorage.setItem('notificationsEnabled', this.notificationsEnabled.toString());
+
+    if (this.notificationsEnabled) {
+      this.loadNotifications();
+    } else {
+      this.notifications = [];
+      this.unreadCount = 0;
+    }
   }
 
   @HostListener('document:click', ['$event'])
@@ -153,6 +193,15 @@ export class NavbarComponent implements OnInit, OnDestroy {
     if (this.showNotifications && this.bellIcon && !this.bellIcon.nativeElement.contains(event.target)) {
       this.showNotifications = false;
     }
+  }
+
+  getDashboardRoute(): string {
+    const role = this.authService.getUserRole();
+    if (role === 'ADMIN' || role === 'ROLE_ADMIN') {
+      return '/admin/dashboard';
+    }
+    // Both USER and BUSINESS roles should land on the personal wallet dashboard
+    return '/dashboard';
   }
 
   logout() { this.authService.logout(); this.router.navigate(['/login']); }

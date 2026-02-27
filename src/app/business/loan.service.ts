@@ -65,7 +65,14 @@ export class LoanService {
         return this.http.get<ApiResponse<LoanAnalyticsDTO>>(`${this.apiUrl}/analytics`);
     }
 
-    repayLoan(loanId: number, amount: number): Observable<ApiResponse<string>> {
-        return this.http.post<ApiResponse<string>>(`${this.apiUrl}/repay`, { loanId, amount });
+    repayLoan(loanId: number, amount: number, transactionPin: string, isFullForeclosure: boolean = false): Observable<ApiResponse<string>> {
+        const payload = {
+            loanId,
+            amount,
+            transactionPin,
+            isFullForeclosure,
+            idempotencyKey: Date.now().toString()
+        };
+        return this.http.post<ApiResponse<string>>(`${this.apiUrl}/repay`, payload);
     }
 }

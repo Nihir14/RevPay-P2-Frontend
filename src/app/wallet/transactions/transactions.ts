@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { WalletService } from '../wallet.service';
 import { Transaction } from '../../shared/models/models';
+import { AuthService } from '../../auth/auth.service';
 
 @Component({
   selector: 'app-transactions',
@@ -161,8 +162,10 @@ export class TransactionsComponent implements OnInit {
   totalPages = 1;
   pageSize = 20;
   isExporting = false;
+  currentUserId: number | null = null;
 
-  constructor(private fb: FormBuilder, private walletService: WalletService) {
+  constructor(private fb: FormBuilder, private walletService: WalletService, private authService: AuthService) {
+    this.currentUserId = this.authService.getUserId();
     this.filterForm = this.fb.group({
       type: [''],
       status: [''],
@@ -219,7 +222,7 @@ export class TransactionsComponent implements OnInit {
 
   handleResponse(res: any) {
     if (res.data && res.data.content) {
-      this.transactions = res.data.content;
+      this.transactions = res.data.content.filter((txn: any) => txn.type !== 'REQUEST');
       this.totalPages = res.data.totalPages || 1;
     }
   }
@@ -243,7 +246,24 @@ export class TransactionsComponent implements OnInit {
   }
 
   isOutgoing(txn: any): boolean {
-    return txn.type === 'SEND' || txn.type === 'WITHDRAWAL' || txn.type === 'PAYMENT' || txn.type === 'TRANSFER';
+    if (txn.senderId && txn.receiverId && txn.senderId !== txn.receiverId) {
+      return Number(txn.senderId) === Number(this.currentUserId);
+    }
+    if (txn.type === 'ADD_FUNDS' || txn.type === 'DEPOSIT') {
+      return false;
+    }
+    if (txn.type === 'WITHDRAWAL') {
+      return true;
+    }
+    if (txn.type === 'LOAN_DISBURSEMENT') {
+      const role = this.authService.getUserRole();
+      return role === 'ADMIN' || role === 'ROLE_ADMIN';
+    }
+    if (txn.type === 'LOAN_REPAYMENT') {
+      const role = this.authService.getUserRole();
+      return role !== 'ADMIN' && role !== 'ROLE_ADMIN';
+    }
+    return txn.type === 'SEND' || txn.type === 'PAYMENT' || txn.type === 'TRANSFER' || txn.type === 'INVOICE_PAYMENT';
   }
 
   abs(val: number): number {
