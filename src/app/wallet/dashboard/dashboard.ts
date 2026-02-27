@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
 import { WalletService } from '../wallet.service';
+import { AuthService } from '../../auth/auth.service';
 
 @Component({
   selector: 'app-dashboard',
@@ -123,8 +124,10 @@ export class DashboardComponent implements OnInit {
 
   showAddFunds: boolean = false;
   addFundsForm: FormGroup;
+  currentUserId: number | null = null;
 
-  constructor(private fb: FormBuilder, private walletService: WalletService) {
+  constructor(private fb: FormBuilder, private walletService: WalletService, private authService: AuthService) {
+    this.currentUserId = this.authService.getUserId();
     this.addFundsForm = this.fb.group({
       amount: ['', [Validators.required, Validators.min(1)]],
       cardId: ['', Validators.required],
@@ -140,8 +143,12 @@ export class DashboardComponent implements OnInit {
     this.walletService.getBalance().subscribe(res => {
       if (res.data) this.balance = res.data;
     });
-    this.walletService.getTransactions(0, 5).subscribe(res => {
-      if (res.data && res.data.content) this.transactions = res.data.content;
+    this.walletService.getTransactions(0, 15).subscribe(res => {
+      if (res.data && res.data.content) {
+        this.transactions = res.data.content
+          .filter((txn: any) => txn.type !== 'REQUEST')
+          .slice(0, 5);
+      }
     });
     this.walletService.getCards(0, 50).subscribe(res => {
       if (res.data && res.data.content) this.cards = res.data.content;
@@ -149,7 +156,24 @@ export class DashboardComponent implements OnInit {
   }
 
   isOutgoing(txn: any): boolean {
-    return txn.type === 'SEND' || txn.type === 'WITHDRAWAL' || txn.type === 'PAYMENT' || txn.type === 'TRANSFER';
+    if (txn.senderId && txn.receiverId && txn.senderId !== txn.receiverId) {
+      return Number(txn.senderId) === Number(this.currentUserId);
+    }
+    if (txn.type === 'ADD_FUNDS' || txn.type === 'DEPOSIT') {
+      return false;
+    }
+    if (txn.type === 'WITHDRAWAL') {
+      return true;
+    }
+    if (txn.type === 'LOAN_DISBURSEMENT') {
+      const role = this.authService.getUserRole();
+      return role === 'ADMIN' || role === 'ROLE_ADMIN';
+    }
+    if (txn.type === 'LOAN_REPAYMENT') {
+      const role = this.authService.getUserRole();
+      return role !== 'ADMIN' && role !== 'ROLE_ADMIN';
+    }
+    return txn.type === 'SEND' || txn.type === 'PAYMENT' || txn.type === 'TRANSFER' || txn.type === 'INVOICE_PAYMENT';
   }
 
   onAddFunds() {

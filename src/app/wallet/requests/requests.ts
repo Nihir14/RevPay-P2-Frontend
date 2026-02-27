@@ -36,7 +36,7 @@ import { Transaction } from '../../shared/models/models';
           
           <div *ngFor="let req of incomingRequests" class="req-card">
             <div class="req-header">
-              <span>From User ID: {{ req.senderId }}</span>
+              <span>{{ req.description || 'From User ID: ' + req.senderId }}</span>
               <span class="amount">₹{{ req.amount }}</span>
             </div>
             <div class="req-date">{{ req.timestamp | date:'short' }}</div>
@@ -124,13 +124,15 @@ export class RequestsComponent implements OnInit {
   }
 
   loadIncoming() {
-    this.walletService.getIncomingRequests().subscribe(res => {
+    // Backend's 'outgoing' = money outgoing from me = UI 'incoming request'
+    this.walletService.getOutgoingRequests().subscribe(res => {
       if (res.data && res.data.content) this.incomingRequests = res.data.content;
     });
   }
 
   loadOutgoing() {
-    this.walletService.getOutgoingRequests().subscribe(res => {
+    // Backend's 'incoming' = money incoming to me = UI 'outgoing request'
+    this.walletService.getIncomingRequests().subscribe(res => {
       if (res.data && res.data.content) this.outgoingRequests = res.data.content;
     });
   }

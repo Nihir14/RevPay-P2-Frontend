@@ -27,15 +27,15 @@ import { BusinessProfileService } from '../business-profile.service';
       <div class="analytics-grid">
         <div class="stat-card">
           <h4>Total Outstanding</h4>
-          <p class="amount">₹{{ analytics?.totalOutstanding || 0 }}</p>
+          <p class="amount">₹{{ (analytics?.totalOutstanding || 0) | number:'1.2-2' }}</p>
         </div>
         <div class="stat-card">
           <h4>Total Paid</h4>
-          <p class="amount text-success">₹{{ analytics?.totalPaid || 0 }}</p>
+          <p class="amount text-success">₹{{ (analytics?.totalPaid || 0) | number:'1.2-2' }}</p>
         </div>
         <div class="stat-card">
           <h4>Pending Instalments</h4>
-          <p class="amount text-warning">₹{{ analytics?.totalPending || 0 }}</p>
+          <p class="amount text-warning">₹{{ (analytics?.totalPending || 0) | number:'1.2-2' }}</p>
         </div>
       </div>
 
@@ -91,14 +91,17 @@ import { BusinessProfileService } from '../business-profile.service';
                   <span class="badge" [ngClass]="loan.status">{{ loan.status }}</span>
                 </div>
                 <div class="loan-details">
-                  <p><strong>Amount:</strong> ₹{{ loan.amount }}</p>
+                  <p><strong>Amount:</strong> ₹{{ loan.amount | number:'1.2-2' }}</p>
                   <p><strong>Approved Rate:</strong> {{ loan.interestRate ? loan.interestRate + '%' : 'Pending Approval' }}</p>
                   <p><strong>Tenure:</strong> {{ loan.tenureMonths }} months</p>
-                  <p *ngIf="loan.status === 'APPROVED'"><strong>EMI:</strong> ₹{{ loan.emiAmount }}/mo</p>
-                  <p *ngIf="loan.status === 'APPROVED'"><strong>Remaining:</strong> ₹{{ loan.remainingAmount }}</p>
+                  <p *ngIf="['APPROVED', 'ACTIVE'].includes(loan.status)"><strong>Monthly EMI:</strong> ₹{{ loan.emiAmount | number:'1.2-2' }}</p>
+                  <p *ngIf="['APPROVED', 'ACTIVE'].includes(loan.status)"><strong>Remaining Balance:</strong> ₹{{ loan.remainingAmount | number:'1.2-2' }}</p>
                 </div>
-                @if (loan.status === 'APPROVED' && loan.remainingAmount > 0) {
-                  <button class="btn-sm btn-repay" (click)="repayEmi(loan.loanId, loan.emiAmount)">Pay Next EMI</button>
+                @if (['APPROVED', 'ACTIVE'].includes(loan.status) && loan.remainingAmount > 0) {
+                  <div class="repayment-actions">
+                    <button class="btn-sm btn-repay" (click)="repayEmi(loan.loanId, loan.emiAmount)">Pay Monthly EMI (₹{{ loan.emiAmount | number:'1.2-2' }})</button>
+                    <button class="btn-sm btn-preclose" (click)="precloseLoan(loan.loanId, loan.remainingAmount)">Preclose Loan</button>
+                  </div>
                 }
               </div>
             }
@@ -113,10 +116,12 @@ import { BusinessProfileService } from '../business-profile.service';
     .btn-success:hover { background: #157347; }
     .btn-primary { background: #0d6efd; color: white; padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer; }
     .btn-primary:disabled { background: #6c757d; cursor: not-allowed; }
-    .btn-repay { background: #ffc107; color: #000; border: none; padding: 8px 15px; border-radius: 4px; cursor: pointer; font-weight: bold; width: 100%; margin-top: 10px; }
+    .btn-repay { background: #ffc107; color: #000; border: none; padding: 10px 15px; border-radius: 4px; cursor: pointer; font-weight: bold; width: 100%; margin-bottom: 10px; }
     .btn-repay:hover { background: #e0a800; }
+    .btn-preclose { background: #dc3545; color: white; border: none; padding: 10px 15px; border-radius: 4px; cursor: pointer; font-weight: bold; width: 100%; }
+    .btn-preclose:hover { background: #c82333; }
     
-    .alert-warning { background: #fff3cd; color: #856404; padding: 15px; border-radius: 5px; border: 1px solid #ffeeba; margin-bottom: 20px; }
+    .repayment-actions { margin-top: 15px; border-top: 1px solid #eee; padding-top: 15px; }
     
     .analytics-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 20px; }
     .stat-card { background: white; padding: 15px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); border-left: 4px solid #0d6efd; }
@@ -142,7 +147,7 @@ import { BusinessProfileService } from '../business-profile.service';
     
     .badge { padding: 4px 8px; border-radius: 12px; font-size: 11px; font-weight: bold; }
     .badge.PENDING { background: #fff3cd; color: #856404; }
-    .badge.APPROVED { background: #d1e7dd; color: #0f5132; }
+    .badge.APPROVED, .badge.ACTIVE { background: #d1e7dd; color: #0f5132; }
     .badge.REJECTED { background: #f8d7da; color: #842029; }
     .badge.CLOSED { background: #e2e3e5; color: #383d41; }
   `]
@@ -210,13 +215,37 @@ export class BusinessLoansComponent implements OnInit {
   }
 
   repayEmi(loanId: number, emiAmount: number) {
-    if (confirm(`Pay the scheduled EMI of ₹${emiAmount} from your wallet balance?`)) {
-      this.loanService.repayLoan(loanId, emiAmount).subscribe({
+    if (confirm(`Pay the scheduled Monthly EMI of ₹${emiAmount.toFixed(2)} from your wallet balance?`)) {
+      const pin = prompt("Please enter your transaction PIN to confirm EMI payment:");
+      if (!pin) {
+        alert("Payment cancelled: PIN is required.");
+        return;
+      }
+
+      this.loanService.repayLoan(loanId, emiAmount, pin, false).subscribe({
         next: () => {
           this.loadDashboardData();
-          alert("EMI paid successfully!");
+          alert("Monthly EMI paid successfully!");
         },
         error: (err) => alert("Failed to pay EMI: " + (err.error?.message || "Insufficient balance or error"))
+      });
+    }
+  }
+
+  precloseLoan(loanId: number, remainingAmount: number) {
+    if (confirm(`Are you sure you want to preclose this loan? This will deduct the remaining balance of ₹${remainingAmount.toFixed(2)} from your wallet.`)) {
+      const pin = prompt("Please enter your transaction PIN to confirm Loan Preclosure:");
+      if (!pin) {
+        alert("Payment cancelled: PIN is required.");
+        return;
+      }
+
+      this.loanService.repayLoan(loanId, remainingAmount, pin, true).subscribe({
+        next: () => {
+          this.loadDashboardData();
+          alert("Loan preclosed successfully!");
+        },
+        error: (err) => alert("Failed to preclose loan: " + (err.error?.message || "Insufficient balance or error"))
       });
     }
   }
