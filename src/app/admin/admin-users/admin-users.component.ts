@@ -3,8 +3,8 @@ import { CommonModule } from '@angular/common';
 import { AdminService } from '../admin.service';
 
 @Component({
+  standalone: true,
     selector: 'app-admin-users',
-    standalone: true,
     imports: [CommonModule],
     templateUrl: './admin-users.component.html',
     styleUrls: ['./admin-users.component.css']

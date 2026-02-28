@@ -3,15 +3,10 @@ import { RouterOutlet } from '@angular/router';
 import { NavbarComponent } from './core/navbar/navbar';
 
 @Component({
-  selector: 'app-root',
   standalone: true,
-  imports: [RouterOutlet, NavbarComponent],
-  template: `
-    <app-navbar></app-navbar>
-    <div class="main-content">
-      <router-outlet></router-outlet>
-    </div>
-  `,
-  styles: [` .main-content { padding: 20px; } `]
+    selector: 'app-root',
+    imports: [RouterOutlet, NavbarComponent],
+    templateUrl: './app.component.html',
+    styleUrl: './app.component.css'
 })
 export class AppComponent { }

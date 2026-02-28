@@ -10,14 +10,16 @@
     </div>
 </div>
 
-<div *ngIf="error" class="alert alert-danger">
+@if (error) {
+<div class="alert alert-danger">
     <i class="fas fa-exclamation-triangle me-2"></i> {{ error }}
 </div>
+}
 
 <div class="card shadow-sm border-0">
     <div class="card-body p-0">
         <div class="table-responsive">
-            <table class="table table-hover table-striped align-middle mb-0" style="font-size: 0.9rem;">
+            <table class="table table-hover table-striped align-middle mb-0 ledger-table">
                 <thead class="table-dark">
                     <tr>
                         <th>Ref ID</th>
@@ -30,24 +32,29 @@
                 </thead>
                 <tbody>
                     <!-- Loading State -->
-                    <tr *ngIf="loading && transactions.length === 0">
+                    @if (loading && transactions.length === 0) {
+                    <tr>
                         <td colspan="6" class="text-center py-5">
                             <div class="spinner-border text-primary" role="status">
                                 <span class="visually-hidden">Loading...</span>
                             </div>
                         </td>
                     </tr>
+                    }
 
                     <!-- Empty State -->
-                    <tr *ngIf="!loading && transactions.length === 0">
+                    @if (!loading && transactions.length === 0) {
+                    <tr>
                         <td colspan="6" class="text-center py-5 text-muted">
                             <i class="fas fa-file-invoice-dollar fa-3x mb-3 text-light"></i>
                             <p>No transactions recorded yet.</p>
                         </td>
                     </tr>
+                    }
 
                     <!-- Data Rows -->
-                    <tr *ngFor="let tx of transactions">
+                    @for (tx of transactions; track tx) {
+                    <tr>
                         <td>
                             <span class="text-monospace text-muted">{{ tx.transactionRef }}</span>
                         </td>
@@ -56,20 +63,23 @@
                         </td>
                         <td>
                             <div class="d-flex align-items-center">
-                                <div class="d-flex flex-column align-items-end text-truncate" style="max-width: 150px;">
-                                    <span class="fw-bold" style="font-size: 0.85rem;"
-                                        [title]="tx.senderName || 'System'">{{ tx.senderName || 'System' }}</span>
-                                    <span class="text-muted" style="font-size: 0.75rem;" *ngIf="tx.senderEmail"
-                                        [title]="tx.senderEmail">{{ tx.senderEmail }}</span>
+                                <div class="d-flex flex-column align-items-end text-truncate ledger-participant">
+                                    <span class="fw-bold ledger-participant-name" [title]="tx.senderName || 'System'">{{
+                                        tx.senderName || 'System' }}</span>
+                                    @if (tx.senderEmail) {
+                                    <span class="text-muted ledger-participant-email" [title]="tx.senderEmail">{{
+                                        tx.senderEmail }}</span>
+                                    }
                                 </div>
                                 <i class="fas fa-arrow-right mx-3 text-muted"></i>
-                                <div class="d-flex flex-column align-items-start text-truncate"
-                                    style="max-width: 150px;">
-                                    <span class="fw-bold" style="font-size: 0.85rem;"
+                                <div class="d-flex flex-column align-items-start text-truncate ledger-participant">
+                                    <span class="fw-bold ledger-participant-name"
                                         [title]="tx.receiverName || 'External'">{{ tx.receiverName || 'External'
                                         }}</span>
-                                    <span class="text-muted" style="font-size: 0.75rem;" *ngIf="tx.receiverEmail"
-                                        [title]="tx.receiverEmail">{{ tx.receiverEmail }}</span>
+                                    @if (tx.receiverEmail) {
+                                    <span class="text-muted ledger-participant-email" [title]="tx.receiverEmail">{{
+                                        tx.receiverEmail }}</span>
+                                    }
                                 </div>
                             </div>
                         </td>
@@ -81,18 +91,19 @@
                         </td>
                         <td>
                             <span [class]="getStatusBadgeClass(tx.status)">
-                                <i class="fas fa-circle ms-1" style="font-size: 0.6rem;"></i> {{ tx.status }}
+                                <i class="fas fa-circle ms-1 ledger-status-icon"></i> {{ tx.status }}
                             </span>
                         </td>
                     </tr>
+                    }
                 </tbody>
             </table>
         </div>
     </div>
 
     <!-- Pagination Footer -->
-    <div class="card-footer bg-white border-top d-flex justify-content-between align-items-center"
-        *ngIf="totalPages > 1">
+    @if (totalPages > 1) {
+    <div class="card-footer bg-white border-top d-flex justify-content-between align-items-center">
         <small class="text-muted">Showing page {{ currentPage + 1 }} of {{ totalPages }} ({{ totalElements }} total
             transactions)</small>
         <div class="btn-group">
@@ -102,4 +113,5 @@
                 [disabled]="currentPage >= totalPages - 1">Next</button>
         </div>
     </div>
+    }
 </div>

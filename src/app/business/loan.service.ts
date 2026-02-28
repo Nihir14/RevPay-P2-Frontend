@@ -66,6 +66,10 @@ export class LoanService {
     }
 
     repayLoan(loanId: number, amount: number, transactionPin: string, isFullForeclosure: boolean = false): Observable<ApiResponse<string>> {
+        if (isFullForeclosure) {
+            return this.http.post<ApiResponse<string>>(`${this.apiUrl}/preclose/${loanId}`, {});
+        }
+
         const payload = {
             loanId,
             amount,

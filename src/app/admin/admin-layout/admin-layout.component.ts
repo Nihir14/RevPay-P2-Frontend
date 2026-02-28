@@ -5,8 +5,8 @@ import { AuthService } from '../../auth/auth.service';
 import { NotificationService, NotificationDTO } from '../../core/notification.service';
 
 @Component({
+  standalone: true,
     selector: 'app-admin-layout',
-    standalone: true,
     imports: [CommonModule, RouterModule],
     templateUrl: './admin-layout.component.html',
     styleUrls: ['./admin-layout.component.css']

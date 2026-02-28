@@ -3,8 +3,8 @@ import { CommonModule } from '@angular/common';
 import { AdminService, SystemAnalytics } from '../admin.service';
 
 @Component({
+  standalone: true,
     selector: 'app-admin-dashboard',
-    standalone: true,
     imports: [CommonModule],
     templateUrl: './admin-dashboard.component.html',
     styleUrls: ['./admin-dashboard.component.css']
