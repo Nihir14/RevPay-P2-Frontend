@@ -9,6 +9,7 @@ export interface SystemAnalytics {
     activeBusinesses: number;
     totalTransactions: number;
     totalVolume: number;
+    adminWalletBalance?: number;
 }
 
 @Injectable({

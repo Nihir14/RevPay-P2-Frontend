@@ -27,7 +27,7 @@ export interface PaginatedResponse<T> {
     providedIn: 'root'
 })
 export class NotificationService {
-    private apiUrl = `${environment.apiUrl}/api/v1/notifications`;
+    private apiUrl = `${environment.apiUrl}/notifications`;
 
     constructor(private http: HttpClient) { }
 

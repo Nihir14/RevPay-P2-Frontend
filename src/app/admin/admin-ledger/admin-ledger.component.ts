@@ -3,8 +3,8 @@ import { CommonModule, CurrencyPipe, DatePipe } from '@angular/common';
 import { AdminService } from '../admin.service';
 
 @Component({
+  standalone: true,
     selector: 'app-admin-ledger',
-    standalone: true,
     imports: [CommonModule],
     providers: [CurrencyPipe, DatePipe],
     templateUrl: './admin-ledger.component.html',
